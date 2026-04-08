@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from app.services.background_removal import ALLOWED_EXTENSIONS, BackgroundRemovalService
+from app.services.background_removal import BackgroundRemovalService
 
 
 def parse_args() -> argparse.Namespace:
@@ -29,20 +29,27 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     service = BackgroundRemovalService(model_name=args.model)
-    image_files = [
-        path for path in sorted(input_dir.iterdir()) if path.suffix.lower() in ALLOWED_EXTENSIONS
-    ]
+    image_files = [path for path in sorted(input_dir.iterdir()) if path.is_file()]
 
     if not image_files:
-        raise SystemExit("Tidak ada file gambar yang cocok di folder input.")
+        raise SystemExit("Folder input kosong.")
 
+    processed_count = 0
     for image_path in image_files:
-        processed = service.process_image(image_path.name, image_path.read_bytes())
+        try:
+            processed = service.process_image(image_path.name, image_path.read_bytes())
+        except ValueError:
+            print(f"[SKIP] {image_path.name} bukan gambar yang bisa diproses")
+            continue
+
         output_path = output_dir / processed.output_name
         output_path.write_bytes(processed.content)
+        processed_count += 1
         print(f"[OK] {image_path.name} -> {output_path.name}")
+
+    if processed_count == 0:
+        raise SystemExit("Tidak ada file gambar valid yang berhasil diproses.")
 
 
 if __name__ == "__main__":
     main()
-

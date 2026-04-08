@@ -2,7 +2,7 @@
 
 Starter project sederhana untuk membangun tool penghapus background otomatis dengan dukungan batch upload.
 
-Dashboard web sekarang tersedia di `/` agar proses upload batch bisa dilakukan lewat browser.
+Dashboard web tersedia di `/` agar proses upload batch bisa dilakukan lewat browser.
 
 ## Stack
 
@@ -11,6 +11,10 @@ Dashboard web sekarang tersedia di `/` agar proses upload batch bisa dilakukan l
 - rembg
 - Pillow
 - onnxruntime
+
+Tested target:
+
+- Python 3.14
 
 ## Struktur
 
@@ -28,44 +32,79 @@ requirements.txt
 Dockerfile
 ```
 
-## Instalasi
+## Cara Menjalankan di Windows PowerShell
 
-```bash
+1. Buat virtual environment:
+
+```powershell
 py -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
 ```
 
-## Menjalankan API
+2. Install dependency tanpa perlu aktivasi manual:
 
-```bash
-uvicorn app.main:app --reload
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Endpoint utama:
+Jika `pip` masih tersandung resolver atau wheel lama, upgrade dulu:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install --upgrade pip setuptools wheel
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+3. Jalankan server:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+Atau lebih praktis:
+
+```powershell
+.\start.ps1
+```
+
+4. Buka dashboard di browser:
+
+```text
+http://127.0.0.1:8000/
+```
+
+## Endpoint Utama
 
 - `GET /`
 - `GET /health`
 - `POST /remove-batch`
 
-Contoh upload banyak file lewat `curl`:
+## Catatan Penting
 
-```bash
-curl -X POST "http://127.0.0.1:8000/remove-batch" ^
-  -H "accept: application/zip" ^
-  -H "Content-Type: multipart/form-data" ^
-  -F "files=@foto1.jpg" ^
-  -F "files=@foto2.png" ^
-  --output hasil.zip
+- `requirements.txt` sudah disesuaikan untuk Python 3.14 dan membiarkan `rembg` memilih versi `Pillow` yang kompatibel.
+- Di Windows + Python 3.14, jalankan tanpa `--reload`. Dari audit log, mode `--reload` memicu `PermissionError: [WinError 5] Access is denied` pada `multiprocessing resource_sharer`, sehingga server tampak hidup sebentar lalu koneksi putus.
+- Input sekarang divalidasi berdasarkan isi file gambar, bukan hanya ekstensi. File akan dinormalisasi ke PNG sebelum diproses, jadi format seperti `.jfif`, `.bmp`, `.tif`, `.tiff`, `.gif`, `.jp2`, `.avif`, dan raster umum lain lebih mudah diterima selama Pillow bisa membukanya.
+- Untuk gambar animasi seperti GIF, saat ini yang diproses adalah frame pertama.
+- Saat pertama kali memproses gambar, `rembg` bisa mengunduh model terlebih dulu, jadi proses awal mungkin sedikit lebih lama.
+- Jika PowerShell Anda mengizinkan aktivasi script, Anda juga boleh pakai cara ini:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 ## Menjalankan Batch dari Folder
 
-```bash
-py tools/process_folder.py .\input .\output
+```powershell
+.\.venv\Scripts\python.exe tools\process_folder.py .\input .\output
 ```
 
 Semua hasil akan disimpan sebagai PNG transparan di folder output.
+
+## Contoh Upload Banyak File Lewat curl
+
+```powershell
+curl.exe -X POST "http://127.0.0.1:8000/remove-batch" -H "accept: application/zip" -F "files=@foto1.jpg" -F "files=@download.jfif" -o hasil.zip
+```
 
 ## Catatan Pengembangan Lanjutan
 

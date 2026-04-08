@@ -10,7 +10,11 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from PIL import Image, UnidentifiedImageError
 from rembg import new_session, remove
 
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+# Hint format untuk UI. Validasi utama tetap dilakukan dari isi file.
+SUPPORTED_INPUT_HINT = (
+    ".avif, .bmp, .dib, .gif, .jfif, .jpeg, .jpg, .jpe, .jp2, .png, "
+    ".tif, .tiff, .webp"
+)
 
 
 @dataclass(frozen=True)
@@ -38,17 +42,12 @@ class BackgroundRemovalService:
         if not content:
             raise ValueError(f"File kosong tidak bisa diproses: {filename}")
 
-        suffix = Path(filename).suffix.lower()
-        if suffix not in ALLOWED_EXTENSIONS:
-            allowed = ", ".join(sorted(ALLOWED_EXTENSIONS))
-            raise ValueError(f"Format file tidak didukung untuk {filename}. Gunakan: {allowed}")
-
         try:
-            Image.open(BytesIO(content)).verify()
+            normalized_content = normalize_image_bytes(content)
         except (UnidentifiedImageError, OSError) as exc:
             raise ValueError(f"File bukan gambar valid: {filename}") from exc
 
-        output = remove(content, session=self.session, force_return_bytes=True)
+        output = remove(normalized_content, session=self.session, force_return_bytes=True)
         safe_name = sanitize_filename(filename)
         return ProcessedImage(
             original_name=filename,
@@ -63,6 +62,17 @@ def sanitize_filename(filename: str) -> str:
     return cleaned or "image"
 
 
+def normalize_image_bytes(content: bytes) -> bytes:
+    with Image.open(BytesIO(content)) as image:
+        if getattr(image, "is_animated", False):
+            image.seek(0)
+
+        converted = image.convert("RGBA")
+        output = BytesIO()
+        converted.save(output, format="PNG")
+        return output.getvalue()
+
+
 def build_zip_archive(images: Iterable[ProcessedImage]) -> bytes:
     memory_file = BytesIO()
     with ZipFile(memory_file, mode="w", compression=ZIP_DEFLATED) as archive:
@@ -70,4 +80,3 @@ def build_zip_archive(images: Iterable[ProcessedImage]) -> bytes:
             archive.writestr(image.output_name, image.content)
     memory_file.seek(0)
     return memory_file.read()
-

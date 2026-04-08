@@ -134,7 +134,9 @@ function addFiles(incomingFiles) {
   );
 
   for (const file of incomingFiles) {
-    if (!file.type.startsWith("image/")) {
+    const looksLikeImage =
+      file.type.startsWith("image/") || /\.(avif|bmp|dib|gif|jfif|jpe|jpeg|jpg|jp2|png|tif|tiff|webp)$/i.test(file.name);
+    if (!looksLikeImage) {
       continue;
     }
     deduped.set(buildFileKey(file), file);

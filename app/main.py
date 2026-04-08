@@ -9,8 +9,8 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.services.background_removal import (
-    ALLOWED_EXTENSIONS,
     BackgroundRemovalService,
+    SUPPORTED_INPUT_HINT,
     build_zip_archive,
 )
 
@@ -36,7 +36,7 @@ def healthcheck() -> dict[str, str]:
     return {
         "status": "ok",
         "model": service.model_name,
-        "allowed_extensions": ", ".join(sorted(ALLOWED_EXTENSIONS)),
+        "allowed_extensions": SUPPORTED_INPUT_HINT,
         "max_files_per_batch": str(MAX_FILES_PER_BATCH),
     }
 
