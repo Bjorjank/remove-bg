@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Remove BG Dashboard</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <div class="ambient ambient-left"></div>
+    <div class="ambient ambient-right"></div>
+
+    <main class="dashboard">
+      <section class="hero card">
+        <div class="hero-copy">
+          <p class="eyebrow">Batch Background Removal</p>
+          <h1>Dashboard yang cepat, rapi, dan nyaman dipakai setiap hari.</h1>
+          <p class="hero-text">
+            Taruh banyak gambar sekaligus, proses dalam satu klik, lalu unduh hasil PNG transparan
+            dalam arsip ZIP.
+          </p>
+
+          <div class="hero-stats">
+            <div class="stat-pill">
+              <span class="stat-label">Model</span>
+              <strong id="modelName">Memuat...</strong>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-label">Format</span>
+              <strong id="allowedFormats">Memuat...</strong>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-label">Limit batch</span>
+              <strong id="batchLimit">Memuat...</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-panel">
+          <div class="pulse-ring"></div>
+          <div class="hero-panel-card">
+            <p class="mini-label">Workflow</p>
+            <ol class="workflow">
+              <li>Pilih banyak file gambar.</li>
+              <li>Periksa daftar file sebelum proses.</li>
+              <li>Unduh hasil ZIP sekali jadi.</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <div class="upload card">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Input</p>
+              <h2>Masukkan file batch Anda</h2>
+            </div>
+            <button id="clearButton" class="ghost-button" type="button">Kosongkan</button>
+          </div>
+
+          <label for="fileInput" id="dropzone" class="dropzone">
+            <input id="fileInput" type="file" accept=".jpg,.jpeg,.png,.webp" multiple hidden>
+            <div class="dropzone-content">
+              <p class="dropzone-title">Klik untuk memilih file atau tarik ke sini</p>
+              <p class="dropzone-subtitle">Cocok untuk sesi batch cepat tanpa ribet.</p>
+            </div>
+          </label>
+
+          <div class="selection-summary">
+            <div>
+              <span class="summary-label">Jumlah file</span>
+              <strong id="fileCount">0</strong>
+            </div>
+            <div>
+              <span class="summary-label">Total ukuran</span>
+              <strong id="totalSize">0 KB</strong>
+            </div>
+          </div>
+
+          <div id="fileList" class="file-list empty">
+            <p>Belum ada file yang dipilih.</p>
+          </div>
+        </div>
+
+        <div class="control card">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Process</p>
+              <h2>Jalankan penghapusan background</h2>
+            </div>
+          </div>
+
+          <p class="control-copy">
+            Setelah diproses, sistem akan mengembalikan satu file ZIP berisi seluruh hasil PNG
+            transparan.
+          </p>
+
+          <button id="processButton" class="primary-button" type="button">
+            Proses Batch
+          </button>
+
+          <div id="statusCard" class="status-card idle">
+            <p id="statusText">Siap menerima batch baru.</p>
+          </div>
+
+          <a id="downloadLink" class="download-link hidden" href="#">
+            Unduh hasil terakhir
+          </a>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
