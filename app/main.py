@@ -23,6 +23,7 @@ service = BackgroundRemovalService(
     options=RemovalOptions(
         padding_ratio=float(os.getenv("REMOVE_BG_PADDING_RATIO", "0.08")),
         max_padding_px=int(os.getenv("REMOVE_BG_MAX_PADDING_PX", "256")),
+        max_inference_side=int(os.getenv("REMOVE_BG_MAX_INFERENCE_SIDE", "2048")),
         alpha_matting=os.getenv("REMOVE_BG_ALPHA_MATTING", "true").lower() in {"1", "true", "yes", "on"},
         post_process_mask=os.getenv("REMOVE_BG_POST_PROCESS_MASK", "true").lower() in {"1", "true", "yes", "on"},
     ),
@@ -48,6 +49,7 @@ def healthcheck() -> dict[str, str]:
         "model": service.model_name,
         "alpha_matting": str(service.options.alpha_matting),
         "post_process_mask": str(service.options.post_process_mask),
+        "max_inference_side": str(service.options.max_inference_side),
         "padding_ratio": str(service.options.padding_ratio),
         "max_padding_px": str(service.options.max_padding_px),
         "allowed_extensions": SUPPORTED_INPUT_HINT,

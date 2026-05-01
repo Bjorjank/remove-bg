@@ -33,6 +33,12 @@ def parse_args() -> argparse.Namespace:
         help="Batas padding konteks dalam pixel, default: 256",
     )
     parser.add_argument(
+        "--max-inference-side",
+        type=int,
+        default=2048,
+        help="Batas sisi terpanjang gambar saat diproses model, default: 2048",
+    )
+    parser.add_argument(
         "--no-alpha-matting",
         action="store_true",
         help="Matikan alpha matting jika ingin proses lebih cepat.",
@@ -60,6 +66,7 @@ def main() -> None:
         options=RemovalOptions(
             alpha_matting=not args.no_alpha_matting,
             post_process_mask=not args.no_post_process_mask,
+            max_inference_side=args.max_inference_side,
             padding_ratio=args.padding_ratio,
             max_padding_px=args.max_padding_px,
         ),

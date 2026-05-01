@@ -31,6 +31,7 @@ class RemovalOptions:
     alpha_matting_background_threshold: int = 10
     alpha_matting_erode_size: int = 10
     post_process_mask: bool = True
+    max_inference_side: int = 2048
     padding_ratio: float = 0.08
     max_padding_px: int = 256
 
@@ -93,10 +94,25 @@ def normalize_image_bytes(content: bytes, options: RemovalOptions) -> tuple[byte
 
         oriented = ImageOps.exif_transpose(image)
         converted = oriented.convert("RGB")
-        padded, padding = add_context_padding(converted, options)
+        resized = resize_for_inference(converted, options.max_inference_side)
+        padded, padding = add_context_padding(resized, options)
         output = BytesIO()
         padded.save(output, format="PNG")
         return output.getvalue(), padding
+
+
+def resize_for_inference(image: Image.Image, max_side: int) -> Image.Image:
+    if max_side <= 0:
+        return image
+
+    width, height = image.size
+    current_max_side = max(width, height)
+    if current_max_side <= max_side:
+        return image
+
+    scale = max_side / current_max_side
+    resized_size = (max(1, round(width * scale)), max(1, round(height * scale)))
+    return image.resize(resized_size, Image.Resampling.LANCZOS)
 
 
 def add_context_padding(image: Image.Image, options: RemovalOptions) -> tuple[Image.Image, tuple[int, int, int, int]]:

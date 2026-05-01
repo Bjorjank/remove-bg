@@ -83,6 +83,7 @@ http://127.0.0.1:8000/
 - Di Windows + Python 3.14, jalankan tanpa `--reload`. Dari audit log, mode `--reload` memicu `PermissionError: [WinError 5] Access is denied` pada `multiprocessing resource_sharer`, sehingga server tampak hidup sebentar lalu koneksi putus.
 - Input sekarang divalidasi berdasarkan isi file gambar, bukan hanya ekstensi. File akan dinormalisasi ke PNG sebelum diproses, termasuk menerapkan EXIF Orientation agar foto portrait dari kamera/HP tidak ikut terputar setelah metadata hilang.
 - Pipeline menambahkan padding konteks sementara sebelum inference dan membuangnya lagi setelah hasil PNG dibuat. Ini membantu foto yang subjeknya terlalu mepet tepi frame.
+- Foto resolusi besar dibatasi ke sisi terpanjang 2048 px saat masuk model agar alpha matting tidak menghabiskan RAM beberapa GiB per gambar.
 - Default model adalah `isnet-general-use` dengan alpha matting dan post-process mask aktif untuk kualitas tepi yang lebih halus. Proses pertama bisa lebih lama karena model baru perlu diunduh oleh `rembg`.
 - Untuk gambar animasi seperti GIF, saat ini yang diproses adalah frame pertama.
 - Saat pertama kali memproses gambar, `rembg` bisa mengunduh model terlebih dulu, jadi proses awal mungkin sedikit lebih lama.
@@ -114,10 +115,13 @@ Untuk server, model dan opsi kualitas bisa diatur lewat environment:
 
 ```powershell
 $env:REMOVE_BG_MODEL = "u2net_human_seg"
+$env:REMOVE_BG_MAX_INFERENCE_SIDE = "2048"
 $env:REMOVE_BG_PADDING_RATIO = "0.10"
 $env:REMOVE_BG_ALPHA_MATTING = "true"
 .\start.ps1
 ```
+
+Jika masih terkena limit RAM, turunkan `REMOVE_BG_MAX_INFERENCE_SIDE` ke `1600` atau matikan alpha matting dengan `$env:REMOVE_BG_ALPHA_MATTING = "false"`.
 
 ## Contoh Upload Banyak File Lewat curl
 
