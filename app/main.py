@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from io import BytesIO
 from pathlib import Path
 
@@ -10,13 +11,22 @@ from fastapi.staticfiles import StaticFiles
 
 from app.services.background_removal import (
     BackgroundRemovalService,
+    RemovalOptions,
     SUPPORTED_INPUT_HINT,
     build_zip_archive,
 )
 
 MAX_FILES_PER_BATCH = 50
 BASE_DIR = Path(__file__).resolve().parent
-service = BackgroundRemovalService(model_name="u2net")
+service = BackgroundRemovalService(
+    model_name=os.getenv("REMOVE_BG_MODEL", "isnet-general-use"),
+    options=RemovalOptions(
+        padding_ratio=float(os.getenv("REMOVE_BG_PADDING_RATIO", "0.08")),
+        max_padding_px=int(os.getenv("REMOVE_BG_MAX_PADDING_PX", "256")),
+        alpha_matting=os.getenv("REMOVE_BG_ALPHA_MATTING", "true").lower() in {"1", "true", "yes", "on"},
+        post_process_mask=os.getenv("REMOVE_BG_POST_PROCESS_MASK", "true").lower() in {"1", "true", "yes", "on"},
+    ),
+)
 
 app = FastAPI(
     title="Remove BG Batch API",
@@ -36,6 +46,10 @@ def healthcheck() -> dict[str, str]:
     return {
         "status": "ok",
         "model": service.model_name,
+        "alpha_matting": str(service.options.alpha_matting),
+        "post_process_mask": str(service.options.post_process_mask),
+        "padding_ratio": str(service.options.padding_ratio),
+        "max_padding_px": str(service.options.max_padding_px),
         "allowed_extensions": SUPPORTED_INPUT_HINT,
         "max_files_per_batch": str(MAX_FILES_PER_BATCH),
     }

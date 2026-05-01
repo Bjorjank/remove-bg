@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Iterable
 from zipfile import ZIP_DEFLATED, ZipFile
 
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 from rembg import new_session, remove
 
 # Hint format untuk UI. Validasi utama tetap dilakukan dari isi file.
@@ -24,9 +24,21 @@ class ProcessedImage:
     content: bytes
 
 
+@dataclass(frozen=True)
+class RemovalOptions:
+    alpha_matting: bool = True
+    alpha_matting_foreground_threshold: int = 240
+    alpha_matting_background_threshold: int = 10
+    alpha_matting_erode_size: int = 10
+    post_process_mask: bool = True
+    padding_ratio: float = 0.08
+    max_padding_px: int = 256
+
+
 class BackgroundRemovalService:
-    def __init__(self, model_name: str = "u2net") -> None:
+    def __init__(self, model_name: str = "u2net", options: RemovalOptions | None = None) -> None:
         self.model_name = model_name
+        self.options = options or RemovalOptions()
         self._session = None
 
     @property
@@ -43,11 +55,23 @@ class BackgroundRemovalService:
             raise ValueError(f"File kosong tidak bisa diproses: {filename}")
 
         try:
-            normalized_content = normalize_image_bytes(content)
+            normalized_content, padding = normalize_image_bytes(content, self.options)
         except (UnidentifiedImageError, OSError) as exc:
             raise ValueError(f"File bukan gambar valid: {filename}") from exc
 
-        output = remove(normalized_content, session=self.session, force_return_bytes=True)
+        output = remove(
+            normalized_content,
+            session=self.session,
+            alpha_matting=self.options.alpha_matting,
+            alpha_matting_foreground_threshold=self.options.alpha_matting_foreground_threshold,
+            alpha_matting_background_threshold=self.options.alpha_matting_background_threshold,
+            alpha_matting_erode_size=self.options.alpha_matting_erode_size,
+            post_process_mask=self.options.post_process_mask,
+            force_return_bytes=True,
+        )
+        if any(padding):
+            output = remove_padding(output, padding)
+
         safe_name = sanitize_filename(filename)
         return ProcessedImage(
             original_name=filename,
@@ -62,14 +86,52 @@ def sanitize_filename(filename: str) -> str:
     return cleaned or "image"
 
 
-def normalize_image_bytes(content: bytes) -> bytes:
+def normalize_image_bytes(content: bytes, options: RemovalOptions) -> tuple[bytes, tuple[int, int, int, int]]:
     with Image.open(BytesIO(content)) as image:
         if getattr(image, "is_animated", False):
             image.seek(0)
 
-        converted = image.convert("RGBA")
+        oriented = ImageOps.exif_transpose(image)
+        converted = oriented.convert("RGB")
+        padded, padding = add_context_padding(converted, options)
         output = BytesIO()
-        converted.save(output, format="PNG")
+        padded.save(output, format="PNG")
+        return output.getvalue(), padding
+
+
+def add_context_padding(image: Image.Image, options: RemovalOptions) -> tuple[Image.Image, tuple[int, int, int, int]]:
+    if options.padding_ratio <= 0 or options.max_padding_px <= 0:
+        return image, (0, 0, 0, 0)
+
+    width, height = image.size
+    padding = min(
+        options.max_padding_px,
+        max(1, round(min(width, height) * options.padding_ratio)),
+    )
+    fill = estimate_border_color(image)
+    padded = ImageOps.expand(image, border=padding, fill=fill)
+    return padded, (padding, padding, padding, padding)
+
+
+def estimate_border_color(image: Image.Image) -> tuple[int, int, int]:
+    width, height = image.size
+    points = [
+        (0, 0),
+        (width - 1, 0),
+        (0, height - 1),
+        (width - 1, height - 1),
+    ]
+    channels = list(zip(*(image.getpixel(point)[:3] for point in points)))
+    return tuple(sorted(channel)[len(channel) // 2] for channel in channels)
+
+
+def remove_padding(content: bytes, padding: tuple[int, int, int, int]) -> bytes:
+    left, top, right, bottom = padding
+    with Image.open(BytesIO(content)) as image:
+        width, height = image.size
+        cropped = image.crop((left, top, width - right, height - bottom))
+        output = BytesIO()
+        cropped.save(output, format="PNG")
         return output.getvalue()
 
 

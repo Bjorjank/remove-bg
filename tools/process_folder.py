@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
-from app.services.background_removal import BackgroundRemovalService
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from app.services.background_removal import BackgroundRemovalService, RemovalOptions
 
 
 def parse_args() -> argparse.Namespace:
@@ -12,8 +17,30 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("output_dir", type=Path, help="Folder hasil PNG transparan")
     parser.add_argument(
         "--model",
-        default="u2net",
-        help="Nama model rembg yang ingin dipakai, default: u2net",
+        default="isnet-general-use",
+        help="Nama model rembg yang ingin dipakai, default: isnet-general-use",
+    )
+    parser.add_argument(
+        "--padding-ratio",
+        type=float,
+        default=0.08,
+        help="Padding konteks sebelum inferensi, default: 0.08",
+    )
+    parser.add_argument(
+        "--max-padding-px",
+        type=int,
+        default=256,
+        help="Batas padding konteks dalam pixel, default: 256",
+    )
+    parser.add_argument(
+        "--no-alpha-matting",
+        action="store_true",
+        help="Matikan alpha matting jika ingin proses lebih cepat.",
+    )
+    parser.add_argument(
+        "--no-post-process-mask",
+        action="store_true",
+        help="Matikan post-process mask jika ingin output mentah dari model.",
     )
     return parser.parse_args()
 
@@ -28,7 +55,15 @@ def main() -> None:
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    service = BackgroundRemovalService(model_name=args.model)
+    service = BackgroundRemovalService(
+        model_name=args.model,
+        options=RemovalOptions(
+            alpha_matting=not args.no_alpha_matting,
+            post_process_mask=not args.no_post_process_mask,
+            padding_ratio=args.padding_ratio,
+            max_padding_px=args.max_padding_px,
+        ),
+    )
     image_files = [path for path in sorted(input_dir.iterdir()) if path.is_file()]
 
     if not image_files:

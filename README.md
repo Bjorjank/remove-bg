@@ -81,7 +81,9 @@ http://127.0.0.1:8000/
 
 - `requirements.txt` sudah disesuaikan untuk Python 3.14 dan membiarkan `rembg` memilih versi `Pillow` yang kompatibel.
 - Di Windows + Python 3.14, jalankan tanpa `--reload`. Dari audit log, mode `--reload` memicu `PermissionError: [WinError 5] Access is denied` pada `multiprocessing resource_sharer`, sehingga server tampak hidup sebentar lalu koneksi putus.
-- Input sekarang divalidasi berdasarkan isi file gambar, bukan hanya ekstensi. File akan dinormalisasi ke PNG sebelum diproses, jadi format seperti `.jfif`, `.bmp`, `.tif`, `.tiff`, `.gif`, `.jp2`, `.avif`, dan raster umum lain lebih mudah diterima selama Pillow bisa membukanya.
+- Input sekarang divalidasi berdasarkan isi file gambar, bukan hanya ekstensi. File akan dinormalisasi ke PNG sebelum diproses, termasuk menerapkan EXIF Orientation agar foto portrait dari kamera/HP tidak ikut terputar setelah metadata hilang.
+- Pipeline menambahkan padding konteks sementara sebelum inference dan membuangnya lagi setelah hasil PNG dibuat. Ini membantu foto yang subjeknya terlalu mepet tepi frame.
+- Default model adalah `isnet-general-use` dengan alpha matting dan post-process mask aktif untuk kualitas tepi yang lebih halus. Proses pertama bisa lebih lama karena model baru perlu diunduh oleh `rembg`.
 - Untuk gambar animasi seperti GIF, saat ini yang diproses adalah frame pertama.
 - Saat pertama kali memproses gambar, `rembg` bisa mengunduh model terlebih dulu, jadi proses awal mungkin sedikit lebih lama.
 - Jika PowerShell Anda mengizinkan aktivasi script, Anda juga boleh pakai cara ini:
@@ -99,6 +101,23 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 Semua hasil akan disimpan sebagai PNG transparan di folder output.
+
+Untuk membandingkan model dan kualitas:
+
+```powershell
+.\.venv\Scripts\python.exe tools\process_folder.py .\input .\output-isnet --model isnet-general-use
+.\.venv\Scripts\python.exe tools\process_folder.py .\input .\output-human --model u2net_human_seg
+.\.venv\Scripts\python.exe tools\process_folder.py .\input .\output-u2net --model u2net
+```
+
+Untuk server, model dan opsi kualitas bisa diatur lewat environment:
+
+```powershell
+$env:REMOVE_BG_MODEL = "u2net_human_seg"
+$env:REMOVE_BG_PADDING_RATIO = "0.10"
+$env:REMOVE_BG_ALPHA_MATTING = "true"
+.\start.ps1
+```
 
 ## Contoh Upload Banyak File Lewat curl
 
