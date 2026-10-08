@@ -1,4 +1,27 @@
-# Remove BG Batch Starter
+# Batch Background Removal — Python/FastAPI Image Processing
+
+**Portfolio case study · Python, FastAPI, Pillow, rembg, ONNX Runtime, Docker**
+
+A local-first image-processing application that accepts multiple uploaded images and returns a ZIP archive containing transparent-background PNGs. It includes a browser dashboard and a command-line folder-processing workflow.
+
+### What the code demonstrates
+
+- **Backend API:** FastAPI with a `GET /health` health endpoint and `POST /remove-batch` upload workflow.
+- **Input processing:** Image-content validation, EXIF orientation handling, PNG normalization, and configurable inference settings.
+- **Resource awareness:** A 50-file per-request count limit and configurable input resizing to help bound inference memory use.
+- **Operational usage:** A reproducible PowerShell setup, configurable models, and Dockerfile.
+
+### Try it locally
+
+Follow the Windows PowerShell steps below, then open `http://127.0.0.1:8000/`. The first inference may download model weights and take longer.
+
+**Security and scope:** This is a **local prototype**, not a hardened public multi-user service. It does **not** provide user authentication, per-user quotas, or a proven total-request-byte limit. Keep it on localhost unless additional upload-size restrictions, access controls, deployment security, and resource isolation are implemented and tested.
+
+**No inflated benchmarks:** This README does not claim verified production throughput, commercial users, or unmeasured image-quality scores.
+
+---
+
+## Technical setup and implementation details
 
 Starter project sederhana untuk membangun tool penghapus background otomatis dengan dukungan batch upload.
 
