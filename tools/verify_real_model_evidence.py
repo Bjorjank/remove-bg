@@ -9,10 +9,12 @@ import hashlib
 import io
 import json
 import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.services.background_removal import BackgroundRemovalService, RemovalOptions
 
 ROOT = Path(__file__).resolve().parents[1]
