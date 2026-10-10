@@ -1,6 +1,6 @@
 {
   "source_repository": "https://github.com/Bjorjank/remove-bg",
-  "source_commit": "e5355246d5165cfa7769c937a5c72c3f717fd90f",
+  "source_commit": "68c5c8353151f52a561a92a1c954e7b4c38c163a",
   "capture_type": "original_app_UI_in_real_Chromium",
   "server": "local FastAPI, source app/main.py",
   "static_assets": "original app/static/index.html, styles.css, app.js",
