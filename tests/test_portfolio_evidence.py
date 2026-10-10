@@ -111,7 +111,7 @@ def test_context_padding_is_finite_and_reversible():
     assert padded.size == (116, 96)
 
 def test_filename_sanitization_removes_pathlike_special_characters():
-    assert sanitize_filename("../../confidential?.png") == "confidential_"
+    assert sanitize_filename("../../confidential?.png") == "confidential"
     assert sanitize_filename("A Product (1).jpg") == "A_Product_1"
 
 def test_zip_builder_keeps_expected_bytes():
