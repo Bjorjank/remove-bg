@@ -1,0 +1,90 @@
+name: Reproducible portfolio evidence
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'evidence/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  app-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install small testing environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "fastapi==0.116.1" "uvicorn==0.35.0" "python-multipart==0.0.20" "pillow>=10,<13" "httpx>=0.27,<1" "pytest>=8,<10" "playwright==1.55.0"
+      - name: Verify Python source syntax
+        run: |
+          python -m compileall -q app tools/process_folder.py tools/capture_portfolio_evidence.py tests
+      - name: Test original FastAPI contract and image preprocessing
+        env:
+          PYTHONPATH: tests/support_stubs:.
+        run: |
+          mkdir -p evidence
+          python -m pytest tests/test_portfolio_evidence.py -q --junitxml=evidence/api-test-junit.xml
+      - name: Install real Chromium browser
+        run: python -m playwright install --with-deps chromium
+      - name: Render original running dashboard and capture screenshots
+        run: python tools/capture_portfolio_evidence.py
+      - name: Build machine-readable verification summary
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from xml.etree import ElementTree as E
+          from datetime import datetime, timezone
+          p=Path('evidence')
+          xml=E.parse(p/'api-test-junit.xml').getroot()
+          suite=xml.find('testsuite') if xml.tag!='testsuite' else xml
+          report=json.loads((p/'browser-verification.json').read_text())
+          report.update({
+            'timestamp_utc':datetime.now(timezone.utc).isoformat(timespec='seconds'),
+            'api_test_cases':int(suite.attrib['tests']),
+            'api_test_failures':int(suite.attrib.get('failures','0')),
+            'api_test_errors':int(suite.attrib.get('errors','0')),
+            'api_test_skipped':int(suite.attrib.get('skipped','0')),
+            'test_command':'python -m pytest tests/test_portfolio_evidence.py -q',
+            'browser_command':'python tools/capture_portfolio_evidence.py',
+            'model_output_quality_tested':False,
+            'real_rembg_model_invoked':False,
+            'note':'UI captured from original app. Route processing used test-double inference; real model quality is a separate validation stage.',
+          })
+          assert report['api_test_cases']>=12
+          assert report['api_test_failures']==report['api_test_errors']==0
+          assert report['status']=='PASS'
+          (p/'verification-summary.json').write_text(json.dumps(report,indent=2)+'\n')
+          print(f"PORTFOLIO_EVIDENCE=PASS API_TESTS={report['api_test_cases']} ORIGINAL_UI_BROWSER=PASS MODEL_INFERENCE=STUBBED")
+          PY
+      - name: Upload immutable CI evidence artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: authentic-ui-and-api-checks
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Publish screenshots to source repository after successful main build
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add evidence/original-ui-desktop.png evidence/original-ui-mobile.png evidence/browser-verification.json evidence/verification-summary.json evidence/api-test-junit.xml
+          if git diff --cached --quiet; then
+            echo 'Evidence unchanged'
+          else
+            git commit -m 'evidence: record original UI screenshots and verified API smoke results [skip ci]'
+            git push
+          fi
